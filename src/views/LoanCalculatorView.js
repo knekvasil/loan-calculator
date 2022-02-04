@@ -18,20 +18,17 @@ function LoanCalculatorView() {
     interest_rate: "",
   });
 
+  useEffect(() => {
+    if (loanDate.start_date !== "") {
+      getPublicHolidays(loanDate.getFullYear());
+    }
+  }, [LoanState.start_date]);
+
   // init new date for incrementation
   const loanDate = new Date(LoanState.start_date);
   loanDate.setDate(loanDate.getDate() + 1);
 
-  function getPublicHolidays(year) {
-    /* 
-    This is a quick and dirty solution. Because I'm assigning payments and dates 
-    at the same time, I need to make sure that next year's holidays are
-    known prior to reaching the new year.
-    The if statement blocks the GET call if we already made a call for
-    the same year.
-    It works, but it's ugly. I'll come back to this if I have time...
-    */
-
+  async function getPublicHolidays(year) {
     if (!YearsCalled.includes(year)) {
       setYearsCalled((oldArr) => [...oldArr, year]);
 
@@ -40,12 +37,6 @@ function LoanCalculatorView() {
         .then((res) => {
           let data = res.data;
           data.forEach((holiday) => {
-            /* 
-            Bug:
-            setState() here isn't fast enough. async/await? 
-            calculatePayments() is finishing before setHolidayList()
-            forcing you to click 'submit' twice to factor in holidays
-            */
             setHolidayList((oldList) => [...oldList, holiday.date]);
           });
         })
@@ -56,15 +47,11 @@ function LoanCalculatorView() {
   }
 
   function calculatePayments() {
-    const loanInterest = (
-      LoanState.loan_amount *
-      (LoanState.interest_rate * 0.01)
-    ).toFixed(2);
+    const loanInterest = (LoanState.loan_amount * (LoanState.interest_rate * 0.01)).toFixed(2);
 
-    let remainingLoanBalance = (
-      parseFloat(Number(LoanState.loan_amount)) +
-      parseFloat(Number(loanInterest))
-    ).toFixed(2);
+    let remainingLoanBalance = (parseFloat(Number(LoanState.loan_amount)) + parseFloat(Number(loanInterest))).toFixed(
+      2
+    );
 
     let loanStart = {
       date: String(loanDate).substring(0, 15),
@@ -94,8 +81,7 @@ function LoanCalculatorView() {
       } else {
         // normal payment case
         remainingLoanBalance = (
-          parseFloat(remainingLoanBalance) -
-          parseFloat(Number(LoanState.installment_amount))
+          parseFloat(remainingLoanBalance) - parseFloat(Number(LoanState.installment_amount))
         ).toFixed(2);
 
         // each payment is an object with (date, remainder, subracted payment)
@@ -126,30 +112,22 @@ function LoanCalculatorView() {
 
     // format current date for holiday list search
     let dateMonth = String(loanDate.getMonth() + 1);
-    let dateFormatter = `${loanDate.getFullYear()}-${dateMonth.padStart(
+    let dateFormatter = `${loanDate.getFullYear()}-${dateMonth.padStart(2, "0")}-${String(loanDate.getDate()).padStart(
       2,
       "0"
-    )}-${String(loanDate.getDate()).padStart(2, "0")}`;
+    )}`;
 
     // if new day falls on weekend/holiday, increment
-    if (
-      loanDate.getDay() === 0 ||
-      loanDate.getDay() === 6 ||
-      HolidayList.includes(dateFormatter)
-    ) {
-      while (
-        loanDate.getDay() === 0 ||
-        loanDate.getDay() === 6 ||
-        HolidayList.includes(dateFormatter)
-      ) {
+    if (loanDate.getDay() === 0 || loanDate.getDay() === 6 || HolidayList.includes(dateFormatter)) {
+      while (loanDate.getDay() === 0 || loanDate.getDay() === 6 || HolidayList.includes(dateFormatter)) {
         loanDate.setDate(loanDate.getDate() + 1);
 
         // reformat incremented new date
         dateMonth = String(loanDate.getMonth() + 1);
-        dateFormatter = `${loanDate.getFullYear()}-${dateMonth.padStart(
+        dateFormatter = `${loanDate.getFullYear()}-${dateMonth.padStart(2, "0")}-${String(loanDate.getDate()).padStart(
           2,
           "0"
-        )}-${String(loanDate.getDate()).padStart(2, "0")}`;
+        )}`;
       }
     }
   }
@@ -163,17 +141,13 @@ function LoanCalculatorView() {
 
   function handleSubmit() {
     setPaymentList([]);
-    getPublicHolidays(loanDate.getFullYear());
     calculatePayments();
   }
 
   return (
     <>
       <div className="row d-flex justify-content-around flex-row">
-        <div
-          className="col-xl-3 rounded shadow-lg mb-5"
-          style={{ maxHeight: "700px" }}
-        >
+        <div className="col-xl-3 rounded shadow-lg mb-5" style={{ maxHeight: "700px" }}>
           <Form className="d-flex flex-column flex-nowrap justify-content-start">
             <h5 className="d-flex flex-start mt-3">Start date:</h5>
             <input
@@ -199,11 +173,7 @@ function LoanCalculatorView() {
               </div>
             </div>
             <h5 className="d-flex flex-start mt-3">Installment Interval:</h5>
-            <select
-              onChange={handleChange}
-              name="installment_interval"
-              className="form-control mb-3 input-lg"
-            >
+            <select onChange={handleChange} name="installment_interval" className="form-control mb-3 input-lg">
               <option value="Daily">Daily</option>
               <option value="Weekly">Weekly</option>
               <option value="Monthly">Monthly</option>
@@ -239,12 +209,7 @@ function LoanCalculatorView() {
               </div>
             </div>
           </Form>
-          <Button
-            className="mb-3"
-            variant="primary"
-            type="submit"
-            onClick={handleSubmit}
-          >
+          <Button className="mb-3" variant="primary" type="submit" onClick={handleSubmit}>
             Submit
           </Button>
 
